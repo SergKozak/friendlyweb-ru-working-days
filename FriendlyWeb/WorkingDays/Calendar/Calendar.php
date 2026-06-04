@@ -8,17 +8,18 @@
 namespace FriendlyWeb;
 
 use DateTime;
+use Exception;
 
 class Calendar extends DateTime 
 {
 
     // где лежат все календари в формате JSON
-    private $_calendarDir = "data" . DIRECTORY_SEPARATOR . "russian" . DIRECTORY_SEPARATOR;
-    private $calendar = null;
-    private $day = null;
-    private $month = null;
-    private $year = null;
-    private $i18n = array(
+    private string $calendarDir = "data" . DIRECTORY_SEPARATOR . "russian" . DIRECTORY_SEPARATOR;
+    private mixed $calendar = null;
+    private ?string $day = null;
+    private ?string $month = null;
+    private ?string $year = null;
+    private array $i18n = array(
         "error_file" => "Календарь не найден! Проверьте правильно ли указана директория.",
         "holiday" => "Выходной день"
     );
@@ -29,116 +30,96 @@ class Calendar extends DateTime
      * Метод проверят входит ли в диапазон чисел (Например, "1-5") число
      * Возвращает boolean
      */
-    private function checkRange($range, $number)
+    private function checkRange(string $range, int $number): bool
     {
-
         $range = explode('-', $range);
-
         $range[1] = $range[1] ?? null;
 
         if ($range[1]) {
-
-            for ($i = $range[0]; $i <= $range[1]; $i++) {
-
+            for ($i = (int)$range[0]; $i <= (int)$range[1]; $i++) {
                 if ($i == $number) {
-
                     return true;
-
                 }
-
             }
 
-        } else {
-
-            if ($range[0] == $number) {
-
-                return true;
-
-            }
-
+            return false;
         }
 
+        if ($range[0] == $number) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
-     * Метод устаналивает в соотвествии с установленным годом
+     * Метод устанавливает в соответствии с установленным годом
      * Возвращает boolean
+     * @throws CalendarNotFoundException
      */
-    private function setCalendar() 
+    private function setCalendar(): bool
     {
-
         if (!$this->day || !$this->month || !$this->year) {
-
             $this->setDay("now");
-
         }
 
-        $calendarFile = $this->_calendarDir . $this->year . ".json";
+        $calendarFile = $this->calendarDir . $this->year . ".json";
 
         if (file_exists($calendarFile)) {
-
           $contents = file_get_contents($calendarFile);
-
           $obj = json_decode($contents);
 
           $this->calendar = $obj;
 
           return true;
 
-        } else {
-
-            echo $this->i18n['error_file'];
-
-            return false;
-
         }
 
+        throw new CalendarNotFoundException($calendarFile, $this->i18n['error_file']);
     }
 
 
     /**
      * Метод проверят выходной день $preHoliday для сокращенного дня
      * Возвращает boolean
+     * @throws CalendarNotFoundException
      */
-    private function isRestDay($preHoliday = false) 
+    private function isRestDay(bool $preHoliday = false): bool
     {
-
-        if ($this->setCalendar()) {
-
-            if ( (isset( $this->calendar->{$this->month} )) && ($current_month = $this->calendar->{$this->month}) ) {
-
-                foreach ($current_month as $day_number => $day) {
-
-                    if ($this->checkRange($day_number, $this->day)) {
-
-                        if (($this->calendar->{$this->month}->{$day_number}->rest) and (!$preHoliday)) {
-
-                            return true;
-
-                        }
-
-                        if ((!$this->calendar->{$this->month}->{$day_number}->rest) and ($preHoliday)) {
-
-                            return true;
-
-                        }
-
-                    }
-
-                }
-
-            }
-
+        if (!$this->setCalendar()) {
+            return false;
         }
 
+        if (!isset($this->calendar->{$this->month})) {
+            return false;
+        }
+
+        $currentMonth = $this->calendar->{$this->month};
+
+        foreach ($currentMonth as $dayNumber => $day) {
+            if (!$this->checkRange($dayNumber, (int)$this->day)) {
+                continue;
+            }
+
+            if (($currentMonth->{$dayNumber}->rest) && (!$preHoliday)) {
+                return true;
+            }
+
+            if ((!$currentMonth->{$dayNumber}->rest) && ($preHoliday)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
      * Метод устаналивает дату
      */
-    public function setDay($datetime = 'NOW') 
+    public function setDay(string $datetime = 'NOW'): void
     {
         $datetime = new DateTime($datetime);
+
         $this->day = $datetime->format("j");
         $this->month = $datetime->format("F");
         $this->year = $datetime->format("Y");
@@ -147,79 +128,65 @@ class Calendar extends DateTime
     /**
      * Метод устанавливает директорию с калнедарями
      */
-    public function setCalendarDir($dir) 
+    public function setCalendarDir(string $dir): void
     {
-        $this->_calendarDir = $dir;
+        $this->calendarDir = $dir;
     }
 
     /**
-     * 
+     * Возвращает описание праздничного дня
+     * @throws CalendarNotFoundException
      */
-    public function getHolidayDescription() 
+    public function getHolidayDescription(): ?string
     {
 
-        if ($this->isHoliday()) {
-
-            $holidayDescr = $this->getDescriptionInRange();
-
-            if (!$holidayDescr) {
-
-                return $this->i18n['holiday'];
-
-            } else {
-
-                return $holidayDescr;
-
-            }
-
+        if (!$this->isHoliday()) {
+            return null;
         }
 
+        $holidayDescr = $this->getDescriptionInRange();
+
+        if (!$holidayDescr) {
+            return $this->i18n['holiday'];
+        } 
+
+        return $holidayDescr;
     }
 
     /**
      * Возвращает описание выходного дня в диапазоне дат (например, "7-8")
+     * @throws CalendarNotFoundException
      */
-    private function getDescriptionInRange()
+    private function getDescriptionInRange(): ?string
     {
-
         $month = (array)$this->calendar->{$this->month};
 
         foreach ($month as $days => $obj) {
-
-            if ($this->checkRange($days, $this->day)) {
-
-                return $obj->n;
-
-                break;
-
+            if ($this->checkRange($days, (int)$this->day)) {
+                return $obj->n ?? null;
             }
-
         }
 
+        return null;
     }
 
-    /*
-    * Метод возвращает выходной день или нет
-    * Возвращает boolean
-    */
-    public function isHoliday()
+    /**
+     * Метод возвращает выходной день или нет
+     * Возвращает boolean
+     * @throws CalendarNotFoundException
+     */
+    public function isHoliday(): bool
     {
-
         return $this->isRestDay(false);
-
     }
 
     /**
      * Метод возвращает сокращенный день или нет
      * Возвращает boolean
+     * @throws CalendarNotFoundException
      */
-    public function isPreHoliday()
+    public function isPreHoliday(): bool
     {
-
         return $this->isRestDay(true);
-
     }
-
 }
-
-?>

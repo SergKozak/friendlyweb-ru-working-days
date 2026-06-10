@@ -14,7 +14,7 @@ class Calendar extends DateTime
 {
 
     // где лежат все календари в формате JSON
-    private string $calendarDir = "data" . DIRECTORY_SEPARATOR . "russian" . DIRECTORY_SEPARATOR;
+    private string $calendarDir = __DIR__ . "/../data" . DIRECTORY_SEPARATOR . "russian" . DIRECTORY_SEPARATOR;
     private mixed $calendar = null;
     private ?string $day = null;
     private ?string $month = null;

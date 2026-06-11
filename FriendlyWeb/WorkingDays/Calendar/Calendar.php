@@ -189,4 +189,16 @@ class Calendar extends DateTime
     {
         return $this->isRestDay(true);
     }
+
+    public function isWeekend(): bool
+    {
+        $dayOfWeek = (int) $this->format('N');
+        
+        return 6 === $dayOfWeek || 7 === $dayOfWeek;
+    }
+
+    public function isWorkingDay(): bool
+    {
+        return false === $this->isHoliday() && false === $this->isWeekend();
+    }
 }

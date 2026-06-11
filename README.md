@@ -85,6 +85,24 @@ getHolidayDescription(): ?string
 
 **Внимание:** Метод может выбросить исключение `CalendarNotFoundException`, если файл календаря для указанного года не найден.
 
+#### Проверка выходного дня (суббота/воскресенье)
+
+```php
+isWeekend(): bool
+```
+
+Метод возвращает `true`, если установленный день — суббота или воскресенье. Использует унаследованный от `DateTime` метод `format('N')` для определения дня недели.
+
+#### Проверка рабочего дня
+
+```php
+isWorkingDay(): bool
+```
+
+Метод возвращает `true`, если день является рабочим (не праздничный выходной и не суббота/воскресенье). Внутри использует комбинацию `isHoliday()` и `isWeekend()`.
+
+**Внимание:** Метод может выбросить исключение `CalendarNotFoundException`, если файл календаря для указанного года не найден.
+
 ### Обработка исключений
 
 При работе с методами `isHoliday()`, `isPreHoliday()` и `getHolidayDescription()` рекомендуется обрабатывать исключение `CalendarNotFoundException`:
@@ -110,9 +128,13 @@ try {
 ```php
 echo 'Сегодня ';
 
-if ($workingdays->isHoliday()) {
+if ($workingdays->isWeekend()) {
 
-    echo "выходной (" . $workingdays->getHolidayDescription() . ")";
+    echo "выходной (суббота или воскресенье)";
+
+} elseif ($workingdays->isHoliday()) {
+
+    echo "праздничный выходной (" . $workingdays->getHolidayDescription() . ")";
 
 } elseif ($workingdays->isPreHoliday()) {
 
@@ -132,9 +154,13 @@ $workingdays->setDay('2022-03-08'); // Устанавливаем дату
 
 echo '8 марта, 2022 - ';
 
-if ($workingdays->isHoliday()) {
+if ($workingdays->isWeekend()) {
 
-    echo 'выходной (' . $workingdays->getHolidayDescription() . ')';
+    echo 'выходной (суббота или воскресенье)';
+
+} elseif ($workingdays->isHoliday()) {
+
+    echo 'праздничный выходной (' . $workingdays->getHolidayDescription() . ')';
 
 } elseif ($workingdays->isPreHoliday()) {
 
@@ -144,6 +170,18 @@ if ($workingdays->isHoliday()) {
 
     echo 'рабочий день';
 
+}
+```
+
+### Проверка рабочего дня
+
+```php
+$workingdays->setDay('2024-01-15'); // Вторник
+
+if ($workingdays->isWorkingDay()) {
+    echo 'Рабочий день';
+} else {
+    echo 'Выходной';
 }
 ```
 

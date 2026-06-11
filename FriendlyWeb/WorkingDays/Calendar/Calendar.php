@@ -8,7 +8,6 @@
 namespace FriendlyWeb;
 
 use DateTime;
-use Exception;
 
 class Calendar extends DateTime 
 {
@@ -23,6 +22,12 @@ class Calendar extends DateTime
         "error_file" => "Календарь не найден! Проверьте правильно ли указана директория.",
         "holiday" => "Выходной день"
     );
+
+    public function __construct(string $datetime = 'NOW')
+    {
+        parent::__construct($datetime);
+        $this->setDay($datetime);
+    }
 
 
 
@@ -120,6 +125,8 @@ class Calendar extends DateTime
     {
         $datetime = new DateTime($datetime);
 
+        $this->setTimestamp($datetime->getTimestamp());
+
         $this->day = $datetime->format("j");
         $this->month = $datetime->format("F");
         $this->year = $datetime->format("Y");
@@ -193,12 +200,24 @@ class Calendar extends DateTime
     public function isWeekend(): bool
     {
         $dayOfWeek = (int) $this->format('N');
-        
+
         return 6 === $dayOfWeek || 7 === $dayOfWeek;
     }
 
     public function isWorkingDay(): bool
     {
         return false === $this->isHoliday() && false === $this->isWeekend();
+    }
+
+    public function setTimestamp($timestamp): self
+    {
+        parent::setTimestamp($timestamp);
+        
+        // Автоматически обновляем внутренние свойства
+        $this->day = $this->format("j");
+        $this->month = $this->format("F");
+        $this->year = $this->format("Y");
+        
+        return $this;
     }
 }

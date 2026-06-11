@@ -15,71 +15,106 @@ composer require alexonweb/friendlyweb-ru-working-days
 
 ### Подключение обработчика
 
-*Определяем* **class WorkingDays** 
+*Определяем* **class Calendar** 
 
+```php
+require 'FriendlyWeb/WorkingDays/Calendar/Calendar.php';
+
+$workingdays = new FriendlyWeb\Calendar();
 ```
-require 'FriendlyWeb/WorkingDays/WorkingDays.php';
 
-$workingdays = new FriendlyWeb\WorkingDays();
+### Наследование от DateTime
+
+Класс `Calendar` наследуется от встроенного класса PHP `DateTime`. Это означает, что все методы `DateTime` доступны для использования:
+
+```php
+echo $workingdays->format('Y-m-d'); // 2022-03-08
+echo $workingdays->format('l');     // Wednesday
 ```
 
 ### Методы
 
 #### Установка даты
 
-```
-setDay( *string $format [, int $timestamp = time() ]* )
+```php
+setDay(string $datetime = 'NOW'): void
 ```
 
-Дата *$format* устанавливается в формате `date` PHP. Например, `$workingdays->setDay("2022-03-08");`
-По-умолчанию устанавливается сегоднящний день.
+Дата `$datetime` устанавливается в формате, понятном для `DateTime` PHP. Например, `$workingdays->setDay("2022-03-08");`
+По-умолчанию устанавливается сегодняшний день.
 
 #### Установка директории календарей
 
-```
-setCalendarDir( string $dir )
+```php
+setCalendarDir(string $dir): void
 ```
 
 По-умолчанию директория установлена как `./data/russian/`.
 
-#### Проверяем праздник
+#### Проверка праздника
 
-```
-isHoliday()
+```php
+isHoliday(): bool
 ```
 
 Метод возвращает `true`, если в установленный день (*setDay*) есть праздник.
 
-#### Проверяем сокращенный день
+**Внимание:** Метод может выбросить исключение `CalendarNotFoundException`, если файл календаря для указанного года не найден.
 
-```
-isPreHoliday()
+#### Проверка сокращенного дня
+
+```php
+isPreHoliday(): bool
 ```
 
 Метод возвращает `true`, если установленный день (*setDay*) сокращен на час.
 
+**Внимание:** Метод может выбросить исключение `CalendarNotFoundException`, если файл календаря для указанного года не найден.
+
 #### Описание праздника
 
-```
-getHolidayDescription()
+```php
+getHolidayDescription(): ?string
 ```
 
-Возвращает *string* для установленной даты. Если данные о названии праздника отсутствуют, метод возвращает фразу "*Выходной день*".
+Возвращает описание праздника для установленной даты. Возможные возвращаемые значения:
+
+- **Строка с названием праздника** — если для дня указано описание (например, "Новый год", "8 Марта")
+- **`"Выходной день"`** — если день является выходным, но описание не указано
+- **`null`** — если день является рабочим (не выходной и не праздничный)
+
+**Внимание:** Метод может выбросить исключение `CalendarNotFoundException`, если файл календаря для указанного года не найден.
+
+### Обработка исключений
+
+При работе с методами `isHoliday()`, `isPreHoliday()` и `getHolidayDescription()` рекомендуется обрабатывать исключение `CalendarNotFoundException`:
+
+```php
+use FriendlyWeb\CalendarNotFoundException;
+
+try {
+    if ($workingdays->isHoliday()) {
+        echo 'выходной (' . $workingdays->getHolidayDescription() . ')';
+    }
+} catch (CalendarNotFoundException $e) {
+    echo 'Ошибка: ' . $e->getMessage();
+}
+```
 
 ## Примеры
 
 *Класс определён* (см. *Подключение обработчика*)
 
-### Сегоднящний день
+### Сегодняшний день
 
-```
+```php
 echo 'Сегодня ';
 
-if ( $workingdays->isHoliday() ) {
+if ($workingdays->isHoliday()) {
 
     echo "выходной (" . $workingdays->getHolidayDescription() . ")";
 
-} elseif ( $workingdays->isPreHoliday() ) {
+} elseif ($workingdays->isPreHoliday()) {
 
     echo "сокращенный день";
 
@@ -92,16 +127,16 @@ if ( $workingdays->isHoliday() ) {
 
 ### Точная дата
 
-```
+```php
 $workingdays->setDay('2022-03-08'); // Устанавливаем дату
 
 echo '8 марта, 2022 - ';
 
-if ( $workingdays->isHoliday() ) {
+if ($workingdays->isHoliday()) {
 
     echo 'выходной (' . $workingdays->getHolidayDescription() . ')';
 
-} elseif ( $workingdays->isPreHoliday() ) {
+} elseif ($workingdays->isPreHoliday()) {
 
     echo 'сокращенный день';
 
@@ -122,7 +157,7 @@ if ( $workingdays->isHoliday() ) {
 
 ### Пример формата календаря 
 
-```
+```json
 {
     "January": 
     {
